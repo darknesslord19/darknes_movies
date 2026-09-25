@@ -249,7 +249,7 @@ class YabanciDizi : MainAPI() {
                 Log.d("YBD", dataHash)
                 if (name.contains("Mac")) {
                     val mac = app.get(
-                        "https://yabancidizi.so/api/drive/" +
+                        "https://yabancidizi.news/api/drive/" +
                                 dataLink.replace("/", "_").replace("+", "-"),
                         referer = "$mainUrl/",
                         headers =
