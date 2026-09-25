@@ -1,0 +1,122 @@
+name: CloudStream Derleyici
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.jpg"
+      - "**/*.png"
+
+jobs:
+  CloudStreamDerleyici:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "'src' Depo Kontrolü"
+        uses: actions/checkout@v4.2.2
+        with:
+          path: src
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ github.token }}
+
+      - name: "'build' Depo Kontrolü"
+        uses: actions/checkout@v4.2.2
+        with:
+          ref: builds
+          path: builds
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ github.token }}
+
+      - name: Cache Temizle
+        run: |
+          rm -rf ~/.gradle/caches
+          rm -rf ~/.m2/repository
+
+      - name: JDK 17 Ayarla
+        uses: actions/setup-java@v4.6.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Tüm CloudStream Eklentilerini Derle
+        working-directory: src
+        run: ./gradlew make --stacktrace
+
+      - name: "'build' Derlemelerini Yükle"
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE/builds"
+          find . -maxdepth 1 -name "*.cs3" -type f -delete
+          find "$GITHUB_WORKSPACE/src" -mindepth 2 -path "*/build/*.cs3" -type f -exec cp {} "$GITHUB_WORKSPACE/builds/" \;
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          root = Path.cwd()
+          manifest = root / 'plugins.json'
+          if manifest.exists():
+              try:
+                  data = json.loads(manifest.read_text(encoding='utf-8'))
+              except Exception:
+                  data = []
+              if not isinstance(data, list):
+                  data = []
+              built = {p.stem: p for p in root.glob('*.cs3')}
+              data = [item for item in data if isinstance(item, dict)]
+              for item in data:
+                  name = item.get('internalName')
+                  if name in built:
+                      target = built[name]
+                      digest = hashlib.sha256(target.read_bytes()).hexdigest()
+                      item['fileSize'] = target.stat().st_size
+                      item['fileHash'] = f'sha256-{digest}'
+                      item['url'] = f'https://raw.githubusercontent.com/csprofesor/nik-cloudstream/builds/{target.name}?v={digest}'
+              manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          dosyalar=()
+          while IFS= read -r dosya; do
+            dosyalar+=("$dosya")
+          done < <(find . -maxdepth 1 -name "*.cs3" -type f -print | sort)
+          if [ -f plugins.json ]; then
+            dosyalar+=("plugins.json")
+          fi
+          if [ "${#dosyalar[@]}" -eq 0 ]; then
+            echo "Yüklenecek dosya yok, atlanıyor."
+            exit 0
+          fi
+          git add -- "${dosyalar[@]}"
+          if git diff --cached --quiet; then
+            echo "Yüklenecek değişiklik yok, atlanıyor."
+          else
+            git commit -m "Yeni SinemaTvAz derlemesi: $GITHUB_SHA"
+            for deneme in 1 2 3; do
+              git fetch origin builds
+              git reset --hard HEAD
+              if ! git rebase origin/builds; then
+                echo "::error::origin/builds üzerine rebase başarısız oldu. Uzak dalda çakışan güncellemeler var; üzerine yazmamak için durduruluyor."
+                git rebase --abort || true
+                exit 1
+              fi
+              if git push origin HEAD:builds; then
+                break
+              fi
+              if [ "$deneme" -eq 3 ]; then
+                echo "::error::builds push, uzak dal sürekli güncellendiği için 3 denemede tamamlanamadı."
+                exit 1
+              fi
+              echo "builds push reddedildi (non-fast-forward), yeniden deneniyor ($deneme/3)..."
+            done
+          fi
+
+      - name: "Repo manifest cache-buster güncelle"
+        run: |
+          echo "Repo manifest cache-buster adımı atlandı; plugins.json içindeki SHA256 URL'leri zaten benzersiz cache-buster sağlıyor."
