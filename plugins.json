@@ -102,26 +102,6 @@
     "fileHash": "sha256-b98dde3ddcde0ca848f95a08978bf065e44614e8b26af6b62a327c92e1883596"
   },
   {
-    "url": "https://raw.githubusercontent.com/csprofesor/nik-cloudstream/builds/CanliTV.cs3",
-    "status": 1,
-    "version": 6,
-    "name": "CanliTV",
-    "internalName": "CanliTV",
-    "authors": [
-      "csprofesor"
-    ],
-    "description": "Canlı TV",
-    "fileSize": 19181,
-    "repositoryUrl": "https://github.com/csprofesor/nik-cloudstream",
-    "language": "tr",
-    "tvTypes": [
-      "Live"
-    ],
-    "iconUrl": "https://www.google.com/s2/favicons?domain=tr.canlitv.team&sz=%size%",
-    "apiVersion": 1,
-    "fileHash": "sha256-bbe929f47b3999c16d019047263df26d6fe97b3c7627c57835146756d3fc1ad6"
-  },
-  {
     "url": "https://raw.githubusercontent.com/csprofesor/nik-cloudstream/builds/CizgiMax.cs3",
     "status": 1,
     "version": 16,
