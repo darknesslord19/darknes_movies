@@ -38,6 +38,7 @@ class CanliTV : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val headers = mapOf(
+                val headers = mapOf(
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
             "Referer" to "https://tvheryerde.com",
             "Origin" to "https://tvheryerde.com",
@@ -45,6 +46,7 @@ class CanliTV : MainAPI() {
             "Connection" to "keep-alive",
             "Authorization" to "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbnYiOiJMSVZFIiwiaXBiIjoiMCIsImNnZCI6IjA5M2Q3MjBhLTUwMmMtNDFlZC1hODBmLTJiODE2OTg0ZmI5NSIsImNzaCI6IlRSS1NUIiwiZGN0IjoiM0VGNzUiLCJkaSI6IjNkY2I2NmJiLTZhNjctNDIwYi1iN2MyLTg3ZGQ2MGFjNDNjZCIsInNnZCI6Ijk1N2U3NjliLWJiYjgtNGFiMC05NzYwLTgyM2UyMGE1OWFlMyIsInNwZ2QiOiIxNTY0ODUxZC1hY2ViLTQyZWUtYjkwZi04MGFlNTczOGEyM2EiLCJpY2giOiIwIiwiaWRtIjoiMCIsImlhIjoiOjpmZmZmOjEwLjAuMC42IiwiYXB2IjoiMS4wLjAiLCJhYm4iOiIxMDAwIiwibmJmIjoxNzQwOTY1ODI4LCJleHAiOjE3NDA5NjU4ODgsImlhdCI6MTc0MDk2NTgyOH0.8SgjsXtcwvmCYpV0W2T-rwwUiiFKpluz8crfpRhDv9A"
         )
+
 
         // app.get kullanarak gelen veriyi doğrudan metin olarak alıyoruz (OkHttp gzip'i otomatik çözer)
         val responseText = app.get(mainUrl, headers = headers).text
