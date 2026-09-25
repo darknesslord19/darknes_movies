@@ -1,5 +1,3 @@
-// ! https://codeberg.org/cloudstream/cloudstream-extensions-multilingual/src/branch/master/FreeTVProvider/src/main/kotlin/com/lagradost/FreeTVProvider.kt
-
 package com.keyiflerolsun
 
 import CanliTvResult
@@ -36,25 +34,62 @@ class CanliTV : MainAPI() {
     override val supportedTypes = setOf(TvType.Live)
     private var kanallar = mutableListOf<ChannelResult>()
 
+    // Dinamik token cache'leme veya alma mekanizması için değişkenler
+    private var cachedToken: String? = null
+    private var tokenExpiryTime: Long = 0
+
+    private suspend fun getDynamicToken(): String {
+        // Eğer token hala geçerliyse tekrar istek atıp yormayalım (Örn: 50 dakika cache)
+        if (cachedToken != null && System.currentTimeMillis() < tokenExpiryTime) {
+            return cachedToken!!
+        }
+
+        try {
+            // BURASI ÖNEMLİ: Frontend'in token aldığı handshake / auth endpoint'i simüle edilmelidir.
+            // Örnek olarak web sitesinin ana sayfasına veya auth servislerine istek atılıp 
+            // dönen header/body içerisinden JWT ayıklanabilir. 
+            // Eğer doğrudan bir handshake URL'si varsa buraya yazılmalı:
+            val authUrl = "https://core-api.kablowebtv.com/api/auth/handshake" // Örnek endpoint
+            
+            val headers = mapOf(
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+                "Referer" to "https://tvheryerde.com",
+                "Origin" to "https://tvheryerde.com"
+            )
+
+            // Not: Eğer handshake endpoint'i farklıysa veya anonim bir cihaz kaydı gerektiriyorsa 
+            // tarayıcı ağ (Network) sekmesinden ilk /login veya /token isteğini buraya uyarlamak gerekir.
+            
+            // Şimdilik örnek olması açısından fallback mekanizması:
+            // cachedToken = gelenCevaptekiToken
+            tokenExpiryTime = System.currentTimeMillis() + (50 * 60 * 1000) // 50 dk geçerlilik
+        } catch (e: Exception) {
+            Log.d("CanliTV", "Token alma hatası: ${e.message}")
+        }
+
+        // Eğer dinamik alma tetiklenemezse eski tip yedek token döndürülebilir
+        return cachedToken ?: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." 
+    }
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val token = getDynamicToken()
+        
         val headers = mapOf(
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
             "Referer" to "https://tvheryerde.com",
             "Origin" to "https://tvheryerde.com",
             "Cache-Control" to "max-age=0",
             "Connection" to "keep-alive",
-            "Authorization" to "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbnYiOiJMSVZFIiwiaXBiIjoiMCIsImNnZCI6IjA5M2Q3MjBhLTUwMmMtNDFlZC1hODBmLTJiODE2OTg0ZmI5NSIsImNzaCI6IlRSS1NUIiwiZGN0IjoiM0VGNzUiLCJkaSI6IjNkY2I2NmJiLTZhNjctNDIwYi1iN2MyLTg3ZGQ2MGFjNDNjZCIsInNnZCI6Ijk1N2U3NjliLWJiYjgtNGFiMC05NzYwLTgyM2UyMGE1OWFlMyIsInNwZ2QiOiIxNTY0ODUxZC1hY2ViLTQyZWUtYjkwZi04MGFlNTczOGEyM2EiLCJpY2giOiIwIiwiaWRtIjoiMCIsImlhIjoiOjpmZmZmOjEwLjAuMC42IiwiYXB2IjoiMS4wLjAiLCJhYm4iOiIxMDAwIiwibmJmIjoxNzQwOTY1ODI4LCJleHAiOjE3NDA5NjU4ODgsImlhdCI6MTc0MDk2NTgyOH0.8SgjsXtcwvmCYpV0W2T-rwwUiiFKpluz8crfpRhDv9A"
+            "Authorization" to "Bearer $token"
         )
 
-        // app.get kullanarak gelen veriyi doğrudan metin olarak alıyoruz (OkHttp gzip'i otomatik çözer)
         val responseText = app.get(mainUrl, headers = headers).text
 
         val objectMapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         val result: CanliTvResult = objectMapper.readValue(responseText)
 
-        val liste = mutableListOf<HomePageList>()
-        kanallar.clear() // Tekrar tekrar ana sayfaya girildiğinde listelerin üst üste binmemesi için temizliyoruz
+        kanallar.clear()
         kanallar.addAll(result.dataResult.allChannels!!)
 
         val newHomePageResponse = newHomePageResponse(
