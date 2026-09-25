@@ -3,6 +3,6 @@
   "description": "gsrepo Türkçe CloudStream eklenti havuzu",
   "manifestVersion": 1,
   "pluginLists": [
-    "https://raw.githubusercontent.com/csprofesor/nik-cloudstream/builds/plugins.json"
+    "https://raw.githubusercontent.com/darknesslord19/darknes_movies/refs/heads/main/plugins.json"
   ]
 }
